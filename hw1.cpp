@@ -3,7 +3,7 @@
   Assignment 1: Height Fields with Shaders.
   C/C++ starter code
 
-  Student username: <type your USC username here>
+  Student username: nboxer
 */
 
 #include "openGLHeader.h"
@@ -248,7 +248,7 @@ void displayFunc()
                 0.0, 1.0, 0.0);
 
   // In here, you can do additional modeling on the object, such as performing translations, rotations and scales.
-  // ...
+  // ...  
 
   // Read the current modelview and projection matrices from our helper class.
   // The matrices are only read here; nothing is actually communicated to OpenGL yet.
@@ -314,23 +314,35 @@ void initScene(int argc, char *argv[])
   // From that point on, exactly one pipeline program is bound at any moment of time.
   pipelineProgram.Bind();
 
-  // Prepare the triangle position and color data for the VBO. 
-  // The code below sets up a single triangle (3 vertices).
-  // The triangle will be rendered using GL_TRIANGLES (in displayFunc()).
+  // Allocate array of vertices from pixel values
+  const int h = heightmapImage->getHeight();
+  const int w = heightmapImage->getWidth();
+  numVertices = h * w;
 
-  numVertices = 3; // This must be a global variable, so that we know how many vertices to render in glDrawArrays.
+  int resolution = h;
 
-  // Vertex positions.
+  // (x,y,z) coordinates for each vertex
   std::unique_ptr<float[]> positions = std::make_unique<float[]>(numVertices * 3);
-  positions[0] = 0.0; positions[1] = 0.0; positions[2] = 0.0; // (x,y,z) coordinates of the first vertex
-  positions[3] = 0.0; positions[4] = 1.0; positions[5] = 0.0; // (x,y,z) coordinates of the second vertex
-  positions[6] = 1.0; positions[7] = 0.0; positions[8] = 0.0; // (x,y,z) coordinates of the third vertex
 
   // Vertex colors.
   std::unique_ptr<float[]> colors = std::make_unique<float[]>(numVertices * 4);
-  colors[0] = 0.0; colors[1] = 0.0;  colors[2] = 1.0;  colors[3] = 1.0; // (r,g,b,a) channels of the first vertex
-  colors[4] = 1.0; colors[5] = 0.0;  colors[6] = 0.0;  colors[7] = 1.0; // (r,g,b,a) channels of the second vertex
-  colors[8] = 0.0; colors[9] = 1.0; colors[10] = 0.0; colors[11] = 1.0; // (r,g,b,a) channels of the third vertex
+
+  for (int y = 0; y < h; ++y)
+  {
+    for (int x = 0; x < w; ++x) 
+    {
+      unsigned int pos = 3 * (y * w + x);
+      positions[pos] = (float)x / (resolution - 1); // x = i / (resolution-1)
+      positions[pos + 1] = (float)heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
+      positions[pos + 2] = (float)-y / (resolution - 1); // z = -j (resolution-1)
+
+      unsigned int colorPos = 4 * (y * w + x);
+      colors[colorPos] = positions[pos + 1];
+      colors[colorPos + 1] = positions[pos + 1];
+      colors[colorPos + 2] = positions[pos + 1];
+      colors[colorPos + 3] = positions[pos + 1];
+    }
+  }
 
   // Create the VBOs. 
   // We make a separate VBO for vertices and colors. 
