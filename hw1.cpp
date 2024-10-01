@@ -60,6 +60,8 @@ char windowTitle[512] = "CSCI 420 Homework 1";
 // Number of vertices in the single triangle (starter code).
 int numVertices;
 
+size_t counter = 0;
+
 // CSCI 420 helper classes.
 OpenGLMatrix matrix;
 PipelineProgram pipelineProgram;
@@ -120,6 +122,7 @@ void mouseMotionDragFunc(int x, int y)
         // control x,y translation via the left mouse button
         terrainTranslate[0] += mousePosDelta[0] * 0.01f;
         terrainTranslate[1] -= mousePosDelta[1] * 0.01f;
+        cout << "translated " << terrainTranslate[0] << ", " << terrainTranslate[1] << endl;
       }
       if (middleMouseButton)
       {
@@ -192,15 +195,22 @@ void mouseButtonFunc(int button, int state, int x, int y)
     break;
   }
 
+  if (glutGetModifiers() & GLUT_ACTIVE_CTRL) {
+    cout << "CTRL pressed" << endl;
+  }
+
   // Keep track of whether CTRL and SHIFT keys are pressed.
   switch (glutGetModifiers())
   {
+    // TODO: change to other key, doesn't work on macos
     case GLUT_ACTIVE_CTRL:
-      controlState = TRANSLATE;
+      controlState = ROTATE;
+      cout << "active CTRL" << ++counter << endl;
     break;
 
     case GLUT_ACTIVE_SHIFT:
       controlState = SCALE;
+      cout << "active shift " << ++counter << endl;
     break;
 
     // If CTRL and SHIFT are not pressed, we are in rotate mode.
@@ -243,12 +253,15 @@ void displayFunc()
   // Set up the camera position, focus point, and the up vector.
   matrix.SetMatrixMode(OpenGLMatrix::ModelView);
   matrix.LoadIdentity();
-  matrix.LookAt(0.0, 0.0, 5.0,
+  matrix.LookAt(0.0, 2.0, 2.0,
                 0.0, 0.0, 0.0,
                 0.0, 1.0, 0.0);
 
   // In here, you can do additional modeling on the object, such as performing translations, rotations and scales.
-  // ...  
+  // x, y, z has to be a unit vector
+  // 
+  matrix.Rotate(60, terrainRotate[0], terrainRotate[1], terrainRotate[2]);
+  matrix.Translate(terrainTranslate[0], terrainTranslate[1], terrainTranslate[2]);
 
   // Read the current modelview and projection matrices from our helper class.
   // The matrices are only read here; nothing is actually communicated to OpenGL yet.
@@ -271,7 +284,7 @@ void displayFunc()
   // Execute the rendering.
   // Bind the VAO that we want to render. Remember, one object = one VAO. 
   vao.Bind();
-  glDrawArrays(GL_TRIANGLES, 0, numVertices); // Render the VAO, by rendering "numVertices", starting from vertex 0.
+  glDrawArrays(GL_POINTS, 0, numVertices); // Render the VAO, by rendering "numVertices", starting from vertex 0.
 
   // Swap the double-buffers.
   glutSwapBuffers();
@@ -319,7 +332,9 @@ void initScene(int argc, char *argv[])
   const int w = heightmapImage->getWidth();
   numVertices = h * w;
 
-  int resolution = h;
+  int resolution = h/2;
+  int xBias = w/2;
+  int zBias = h/2;
 
   // (x,y,z) coordinates for each vertex
   std::unique_ptr<float[]> positions = std::make_unique<float[]>(numVertices * 3);
@@ -332,9 +347,9 @@ void initScene(int argc, char *argv[])
     for (int x = 0; x < w; ++x) 
     {
       unsigned int pos = 3 * (y * w + x);
-      positions[pos] = (float)x / (resolution - 1); // x = i / (resolution-1)
+      positions[pos] = ((float)x - xBias) / (resolution - 1); // x = i / (resolution-1)
       positions[pos + 1] = (float)heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
-      positions[pos + 2] = (float)-y / (resolution - 1); // z = -j (resolution-1)
+      positions[pos + 2] = ((float)-y + zBias) / (resolution - 1); // z = -j / (resolution-1)
 
       unsigned int colorPos = 4 * (y * w + x);
       colors[colorPos] = positions[pos + 1];
