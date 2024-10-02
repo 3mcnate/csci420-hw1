@@ -40,6 +40,8 @@ int leftMouseButton = 0; // 1 if pressed, 0 if not
 int middleMouseButton = 0; // 1 if pressed, 0 if not
 int rightMouseButton = 0; // 1 if pressed, 0 if not
 
+bool zPressed = false;
+
 typedef enum { ROTATE, TRANSLATE, SCALE } CONTROL_STATE;
 CONTROL_STATE controlState = ROTATE;
 
@@ -122,7 +124,6 @@ void mouseMotionDragFunc(int x, int y)
         // control x,y translation via the left mouse button
         terrainTranslate[0] += mousePosDelta[0] * 0.01f;
         terrainTranslate[1] -= mousePosDelta[1] * 0.01f;
-        cout << "translated " << terrainTranslate[0] << ", " << terrainTranslate[1] << endl;
       }
       if (middleMouseButton)
       {
@@ -202,15 +203,12 @@ void mouseButtonFunc(int button, int state, int x, int y)
   // Keep track of whether CTRL and SHIFT keys are pressed.
   switch (glutGetModifiers())
   {
-    // TODO: change to other key, doesn't work on macos
     case GLUT_ACTIVE_CTRL:
-      controlState = ROTATE;
-      cout << "active CTRL" << ++counter << endl;
+      controlState = TRANSLATE;
     break;
 
     case GLUT_ACTIVE_SHIFT:
       controlState = SCALE;
-      cout << "active shift " << ++counter << endl;
     break;
 
     // If CTRL and SHIFT are not pressed, we are in rotate mode.
@@ -218,6 +216,9 @@ void mouseButtonFunc(int button, int state, int x, int y)
       controlState = ROTATE;
     break;
   }
+
+  if (zPressed)
+    controlState = TRANSLATE;
 
   // Store the new mouse position.
   mousePos[0] = x;
@@ -240,7 +241,16 @@ void keyboardFunc(unsigned char key, int x, int y)
       // Take a screenshot.
       saveScreenshot("screenshot.jpg");
     break;
+
+    case 'z':
+      zPressed = true;
+    break;
   }
+}
+
+void keyboardUpFunc(unsigned char key, int x, int y) {
+  if (key == 'z')
+    zPressed = false;
 }
 
 void displayFunc()
@@ -253,14 +263,25 @@ void displayFunc()
   // Set up the camera position, focus point, and the up vector.
   matrix.SetMatrixMode(OpenGLMatrix::ModelView);
   matrix.LoadIdentity();
-  matrix.LookAt(0.0, 2.0, 2.0,
+  matrix.LookAt(0.0, 3.5, 4.0,
                 0.0, 0.0, 0.0,
                 0.0, 1.0, 0.0);
 
   // In here, you can do additional modeling on the object, such as performing translations, rotations and scales.
   // x, y, z has to be a unit vector
-  // 
-  matrix.Rotate(60, terrainRotate[0], terrainRotate[1], terrainRotate[2]);
+
+  // Rotation about x axis
+  matrix.Rotate(terrainRotate[0], 1.0, 0.0, 0.0);
+
+  // Rotation about y axis
+  matrix.Rotate(terrainRotate[1], 0.0, 1.0, 0.0);
+
+  // Rotation about z axis
+  matrix.Rotate(terrainRotate[2], 0.0, 0.0, 1.0);
+
+  // Scale in the x direction
+  matrix.Scale(terrainScale[0], terrainScale[1], terrainScale[2]);
+
   matrix.Translate(terrainTranslate[0], terrainTranslate[1], terrainTranslate[2]);
 
   // Read the current modelview and projection matrices from our helper class.
@@ -432,6 +453,8 @@ int main(int argc, char *argv[])
   glutReshapeFunc(reshapeFunc);
   // callback for pressing the keys on the keyboard
   glutKeyboardFunc(keyboardFunc);
+  // callback for releasing the keys on the keyboard
+  glutKeyboardUpFunc(keyboardUpFunc);
 
   // init glew
   #ifdef __APPLE__
