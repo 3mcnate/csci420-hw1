@@ -353,9 +353,9 @@ void initScene(int argc, char *argv[])
   const int w = heightmapImage->getWidth();
   numVertices = h * w;
 
-  int resolution = h/2;
-  int xBias = w/2;
-  int zBias = h/2;
+  float resolution = h/4;
+  float xBias = w/2;
+  float zBias = h/2;
 
   // (x,y,z) coordinates for each vertex
   std::unique_ptr<float[]> positions = std::make_unique<float[]>(numVertices * 3);
@@ -367,16 +367,19 @@ void initScene(int argc, char *argv[])
   {
     for (int x = 0; x < w; ++x) 
     {
+      // setting vertex positions
       unsigned int pos = 3 * (y * w + x);
-      positions[pos] = ((float)x - xBias) / (resolution - 1); // x = i / (resolution-1)
-      positions[pos + 1] = (float)heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
+      positions[pos] = (-x + xBias) / (resolution - 1); // x = i / (resolution-1)
+      positions[pos + 1] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
       positions[pos + 2] = ((float)-y + zBias) / (resolution - 1); // z = -j / (resolution-1)
 
+      // setting colors
+      float color = (heightmapImage->getPixel(x, y, 0) + 30.0) / 285.0;
       unsigned int colorPos = 4 * (y * w + x);
-      colors[colorPos] = positions[pos + 1];
-      colors[colorPos + 1] = positions[pos + 1];
-      colors[colorPos + 2] = positions[pos + 1];
-      colors[colorPos + 3] = positions[pos + 1];
+      colors[colorPos] = color;
+      colors[colorPos + 1] = color;
+      colors[colorPos + 2] = color;
+      colors[colorPos + 3] = color;
     }
   }
 
