@@ -29,18 +29,25 @@ Vertex createVertex(float xBias, float zBias, float resolution, unsigned char pi
   return Vertex(x1, y1, z1, color);
 }
 
+void addVertexToVBO(std::unique_ptr<float[]>& vertexVBO, std::unique_ptr<float[]>& colorVBO, int &vIndex, int &cIndex, Vertex vertex)
+{
+  vertexVBO[vIndex++] = vertex.x;
+  vertexVBO[vIndex++] = vertex.y;
+  vertexVBO[vIndex++] = vertex.z;
+
+  std::fill_n(colorVBO.get() + cIndex, 4, vertex.color);
+  cIndex += 4;
+}
+
 void addLineToVBO(std::unique_ptr<float[]>& vertexVBO, std::unique_ptr<float[]>& colorVBO, int &vIndex, int &cIndex, Vertex vertex1, Vertex vertex2)
 {
-  vertexVBO[vIndex++] = vertex1.x;
-  vertexVBO[vIndex++] = vertex1.y;
-  vertexVBO[vIndex++] = vertex1.z;
+  addVertexToVBO(vertexVBO, colorVBO, vIndex, cIndex, vertex1);
+  addVertexToVBO(vertexVBO, colorVBO, vIndex, cIndex, vertex2);
+}
 
-  vertexVBO[vIndex++] = vertex2.x;
-  vertexVBO[vIndex++] = vertex2.y;
-  vertexVBO[vIndex++] = vertex2.z;
-
-  std::fill_n(colorVBO.get() + cIndex, 4, vertex1.color);
-  cIndex += 4;
-  std::fill_n(colorVBO.get() + cIndex, 4, vertex2.color);
-  cIndex += 4;
+void addTriangleToVBO(std::unique_ptr<float[]>& vertexVBO, std::unique_ptr<float[]>& colorVBO, int &vIndex, int &cIndex, Vertex vertex1, Vertex vertex2, Vertex vertex3)
+{
+  addVertexToVBO(vertexVBO, colorVBO, vIndex, cIndex, vertex1);
+  addVertexToVBO(vertexVBO, colorVBO, vIndex, cIndex, vertex2);
+  addVertexToVBO(vertexVBO, colorVBO, vIndex, cIndex, vertex3);
 }
