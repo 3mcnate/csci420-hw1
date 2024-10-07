@@ -19,45 +19,58 @@
 #include <memory>
 
 #if defined(WIN32) || defined(_WIN32)
-  #ifdef _DEBUG
-    #pragma comment(lib, "glew32d.lib")
-  #else
-    #pragma comment(lib, "glew32.lib")
-  #endif
+#ifdef _DEBUG
+#pragma comment(lib, "glew32d.lib")
+#else
+#pragma comment(lib, "glew32.lib")
+#endif
 #endif
 
 #if defined(WIN32) || defined(_WIN32)
-  char shaderBasePath[1024] = SHADER_BASE_PATH;
+char shaderBasePath[1024] = SHADER_BASE_PATH;
 #else
-  char shaderBasePath[1024] = "../openGLHelper";
+char shaderBasePath[1024] = "../openGLHelper";
 #endif
 
 using namespace std;
 
 int mousePos[2]; // x,y screen coordinates of the current mouse position
 
-int leftMouseButton = 0; // 1 if pressed, 0 if not 
+int leftMouseButton = 0;   // 1 if pressed, 0 if not
 int middleMouseButton = 0; // 1 if pressed, 0 if not
-int rightMouseButton = 0; // 1 if pressed, 0 if not
+int rightMouseButton = 0;  // 1 if pressed, 0 if not
 
 bool zPressed = false;
 
-typedef enum { ROTATE, TRANSLATE, SCALE } CONTROL_STATE;
+typedef enum
+{
+  ROTATE,
+  TRANSLATE,
+  SCALE
+} CONTROL_STATE;
 CONTROL_STATE controlState = ROTATE;
 
+typedef enum
+{
+  POINTS,
+  LINES,
+  TRIANGLES,
+  SMOOTH_TRIANGLES
+} RENDER_MODE;
+RENDER_MODE renderMode = POINTS;
+
 // Transformations of the terrain.
-float terrainRotate[3] = { 0.0f, 0.0f, 0.0f }; 
+float terrainRotate[3] = {0.0f, 0.0f, 0.0f};
 // terrainRotate[0] gives the rotation around x-axis (in degrees)
 // terrainRotate[1] gives the rotation around y-axis (in degrees)
 // terrainRotate[2] gives the rotation around z-axis (in degrees)
-float terrainTranslate[3] = { 0.0f, 0.0f, 0.0f };
-float terrainScale[3] = { 1.0f, 1.0f, 1.0f };
+float terrainTranslate[3] = {0.0f, 0.0f, 0.0f};
+float terrainScale[3] = {1.0f, 1.0f, 1.0f};
 
 // Width and height of the OpenGL window, in pixels.
 int windowWidth = 1280;
 int windowHeight = 720;
 char windowTitle[512] = "CSCI 420 Homework 1";
-
 
 // Number of vertices in the single triangle (starter code).
 int numVertices;
@@ -84,7 +97,7 @@ VBO trianglesVboColors;
 VAO trianglesVao;
 
 // Write a screenshot to the specified filename.
-void saveScreenshot(const char * filename)
+void saveScreenshot(const char *filename)
 {
   std::unique_ptr<unsigned char[]> screenshotData = std::make_unique<unsigned char[]>(windowWidth * windowHeight * 3);
   glReadPixels(0, 0, windowWidth, windowHeight, GL_RGB, GL_UNSIGNED_BYTE, screenshotData.get());
@@ -93,12 +106,13 @@ void saveScreenshot(const char * filename)
 
   if (screenshotImg.save(filename, ImageIO::FORMAT_JPEG) == ImageIO::OK)
     cout << "File " << filename << " saved successfully." << endl;
-  else cout << "Failed to save file " << filename << '.' << endl;
+  else
+    cout << "Failed to save file " << filename << '.' << endl;
 }
 
 void idleFunc()
 {
-  // Do some stuff... 
+  // Do some stuff...
   // For example, here, you can save the screenshots to disk (to make the animation).
 
   // Notify GLUT that it should call displayFunc.
@@ -112,7 +126,7 @@ void reshapeFunc(int w, int h)
   // When the window has been resized, we need to re-set our projection matrix.
   matrix.SetMatrixMode(OpenGLMatrix::Projection);
   matrix.LoadIdentity();
-  // You need to be careful about setting the zNear and zFar. 
+  // You need to be careful about setting the zNear and zFar.
   // Anything closer than zNear, or further than zFar, will be culled.
   const float zNear = 0.1f;
   const float zFar = 10000.0f;
@@ -125,54 +139,54 @@ void mouseMotionDragFunc(int x, int y)
   // Mouse has moved, and one of the mouse buttons is pressed (dragging).
 
   // the change in mouse position since the last invocation of this function
-  int mousePosDelta[2] = { x - mousePos[0], y - mousePos[1] };
+  int mousePosDelta[2] = {x - mousePos[0], y - mousePos[1]};
 
   switch (controlState)
   {
-    // translate the terrain
-    case TRANSLATE:
-      if (leftMouseButton)
-      {
-        // control x,y translation via the left mouse button
-        terrainTranslate[0] += mousePosDelta[0] * 0.01f;
-        terrainTranslate[1] -= mousePosDelta[1] * 0.01f;
-      }
-      if (middleMouseButton)
-      {
-        // control z translation via the middle mouse button
-        terrainTranslate[2] += mousePosDelta[1] * 0.01f;
-      }
-      break;
+  // translate the terrain
+  case TRANSLATE:
+    if (leftMouseButton)
+    {
+      // control x,y translation via the left mouse button
+      terrainTranslate[0] += mousePosDelta[0] * 0.01f;
+      terrainTranslate[1] -= mousePosDelta[1] * 0.01f;
+    }
+    if (middleMouseButton)
+    {
+      // control z translation via the middle mouse button
+      terrainTranslate[2] += mousePosDelta[1] * 0.01f;
+    }
+    break;
 
-    // rotate the terrain
-    case ROTATE:
-      if (leftMouseButton)
-      {
-        // control x,y rotation via the left mouse button
-        terrainRotate[0] += mousePosDelta[1];
-        terrainRotate[1] += mousePosDelta[0];
-      }
-      if (middleMouseButton)
-      {
-        // control z rotation via the middle mouse button
-        terrainRotate[2] += mousePosDelta[1];
-      }
-      break;
+  // rotate the terrain
+  case ROTATE:
+    if (leftMouseButton)
+    {
+      // control x,y rotation via the left mouse button
+      terrainRotate[0] += mousePosDelta[1];
+      terrainRotate[1] += mousePosDelta[0];
+    }
+    if (middleMouseButton)
+    {
+      // control z rotation via the middle mouse button
+      terrainRotate[2] += mousePosDelta[1];
+    }
+    break;
 
-    // scale the terrain
-    case SCALE:
-      if (leftMouseButton)
-      {
-        // control x,y scaling via the left mouse button
-        terrainScale[0] *= 1.0f + mousePosDelta[0] * 0.01f;
-        terrainScale[1] *= 1.0f - mousePosDelta[1] * 0.01f;
-      }
-      if (middleMouseButton)
-      {
-        // control z scaling via the middle mouse button
-        terrainScale[2] *= 1.0f - mousePosDelta[1] * 0.01f;
-      }
-      break;
+  // scale the terrain
+  case SCALE:
+    if (leftMouseButton)
+    {
+      // control x,y scaling via the left mouse button
+      terrainScale[0] *= 1.0f + mousePosDelta[0] * 0.01f;
+      terrainScale[1] *= 1.0f - mousePosDelta[1] * 0.01f;
+    }
+    if (middleMouseButton)
+    {
+      // control z scaling via the middle mouse button
+      terrainScale[2] *= 1.0f - mousePosDelta[1] * 0.01f;
+    }
+    break;
   }
 
   // store the new mouse position
@@ -195,37 +209,38 @@ void mouseButtonFunc(int button, int state, int x, int y)
   // Keep track of the mouse button state, in leftMouseButton, middleMouseButton, rightMouseButton variables.
   switch (button)
   {
-    case GLUT_LEFT_BUTTON:
-      leftMouseButton = (state == GLUT_DOWN);
+  case GLUT_LEFT_BUTTON:
+    leftMouseButton = (state == GLUT_DOWN);
     break;
 
-    case GLUT_MIDDLE_BUTTON:
-      middleMouseButton = (state == GLUT_DOWN);
+  case GLUT_MIDDLE_BUTTON:
+    middleMouseButton = (state == GLUT_DOWN);
     break;
 
-    case GLUT_RIGHT_BUTTON:
-      rightMouseButton = (state == GLUT_DOWN);
+  case GLUT_RIGHT_BUTTON:
+    rightMouseButton = (state == GLUT_DOWN);
     break;
   }
 
-  if (glutGetModifiers() & GLUT_ACTIVE_CTRL) {
+  if (glutGetModifiers() & GLUT_ACTIVE_CTRL)
+  {
     cout << "CTRL pressed" << endl;
   }
 
   // Keep track of whether CTRL and SHIFT keys are pressed.
   switch (glutGetModifiers())
   {
-    case GLUT_ACTIVE_CTRL:
-      controlState = TRANSLATE;
+  case GLUT_ACTIVE_CTRL:
+    controlState = TRANSLATE;
     break;
 
-    case GLUT_ACTIVE_SHIFT:
-      controlState = SCALE;
+  case GLUT_ACTIVE_SHIFT:
+    controlState = SCALE;
     break;
 
-    // If CTRL and SHIFT are not pressed, we are in rotate mode.
-    default:
-      controlState = ROTATE;
+  // If CTRL and SHIFT are not pressed, we are in rotate mode.
+  default:
+    controlState = ROTATE;
     break;
   }
 
@@ -241,26 +256,43 @@ void keyboardFunc(unsigned char key, int x, int y)
 {
   switch (key)
   {
-    case 27: // ESC key
-      exit(0); // exit the program
+  case 27:   // ESC key
+    exit(0); // exit the program
     break;
 
-    case ' ':
-      cout << "You pressed the spacebar." << endl;
+  case ' ':
+    cout << "You pressed the spacebar." << endl;
     break;
 
-    case 'x':
-      // Take a screenshot.
-      saveScreenshot("screenshot.jpg");
+  case 'x':
+    // Take a screenshot.
+    saveScreenshot("screenshot.jpg");
     break;
 
-    case 'z':
-      zPressed = true;
+  case 'z':
+    zPressed = true;
+    break;
+
+  case '1':
+    renderMode = POINTS;
+    break;
+
+  case '2':
+    renderMode = LINES;
+    break;
+
+  case '3':
+    renderMode = TRIANGLES;
+    break;
+
+  case '4':
+    renderMode = SMOOTH_TRIANGLES;
     break;
   }
 }
 
-void keyboardUpFunc(unsigned char key, int x, int y) {
+void keyboardUpFunc(unsigned char key, int x, int y)
+{
   if (key == 'z')
     zPressed = false;
 }
@@ -315,9 +347,24 @@ void displayFunc()
   pipelineProgram.SetUniformVariableMatrix4fv("projectionMatrix", GL_FALSE, projectionMatrix);
 
   // Execute the rendering.
-  // Bind the VAO that we want to render. Remember, one object = one VAO. 
-  pointsVao.Bind();
-  glDrawArrays(GL_POINTS, 0, numVertices); // Render the VAO, by rendering "numVertices", starting from vertex 0.
+  // Bind the VAO that we want to render. Remember, one object = one VAO.
+  switch (renderMode)
+  {
+  case POINTS:
+    pointsVao.Bind();
+    glDrawArrays(GL_POINTS, 0, numVertices); // Render the VAO, by rendering "numVertices", starting from vertex 0.
+    break;
+
+  case LINES:
+    linesVao.Bind();
+    glDrawArrays(GL_LINES, 0, 2 * numVertices);
+    break;
+
+  case TRIANGLES:
+    trianglesVao.Bind();
+    glDrawArrays(GL_TRIANGLES, 0, 3 * numVertices);
+    break;
+  }
 
   // Swap the double-buffers.
   glutSwapBuffers();
@@ -349,10 +396,10 @@ void initScene(int argc, char *argv[])
   {
     cout << "Failed to build the pipeline program." << endl;
     throw 1;
-  } 
+  }
   cout << "Successfully built the pipeline program." << endl;
-    
-  // Bind the pipeline program that we just created. 
+
+  // Bind the pipeline program that we just created.
   // The purpose of binding a pipeline program is to activate the shaders that it contains, i.e.,
   // any object rendered from that point on, will use those shaders.
   // When the application starts, no pipeline program is bound, which means that rendering is not set up.
@@ -365,9 +412,9 @@ void initScene(int argc, char *argv[])
   const int w = heightmapImage->getWidth();
   numVertices = h * w;
 
-  float resolution = h/4;
-  float xBias = w/2;
-  float zBias = h/2;
+  float resolution = h / 4;
+  float xBias = w / 2;
+  float zBias = h / 2;
 
   // (x,y,z) coordinates for each vertex
   std::unique_ptr<float[]> pointPositions = std::make_unique<float[]>(numVertices * 3);
@@ -380,13 +427,13 @@ void initScene(int argc, char *argv[])
   // setting point positions
   for (int y = 0; y < h; ++y)
   {
-    for (int x = 0; x < w; ++x) 
+    for (int x = 0; x < w; ++x)
     {
       // setting vertex positions
-      unsigned int pos = 3 * (y * w + x);
-      pointPositions[pos] = (-x + xBias) / (resolution - 1); // x = i / (resolution-1)
+      int pos = 3 * (y * w + x);
+      pointPositions[pos] = (-x + xBias) / (resolution - 1);                // x = i / (resolution-1)
       pointPositions[pos + 1] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
-      pointPositions[pos + 2] = (-y + zBias) / (resolution - 1); // z = -j / (resolution-1)
+      pointPositions[pos + 2] = (-y + zBias) / (resolution - 1);            // z = -j / (resolution-1)
 
       // setting colors
       float color = (heightmapImage->getPixel(x, y, 0) + 30.0) / 285.0;
@@ -399,12 +446,31 @@ void initScene(int argc, char *argv[])
   }
 
   // setting line positions
+  for (int y = 0; y < h; ++y)
+  {
+    for (int x = 0; x < w; ++x)
+    {
+      // setting vertex positions
+      int pos = 6 * (y * w + x);
+      linePositions[pos] = (-x + xBias) / (resolution - 1);                // x = i / (resolution-1)
+      linePositions[pos + 1] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
+      linePositions[pos + 2] = (-y + zBias) / (resolution - 1);            // z = -j / (resolution-1)
 
-  // Create the VBOs. 
-  // We make a separate VBO for vertices and colors. 
+      // repeat for the next point
+      linePositions[pos + 3] = (-x + xBias) / (resolution - 1);            // x = i / (resolution-1)
+      linePositions[pos + 4] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
+      linePositions[pos + 5] = (-y + zBias) / (resolution - 1);            // z = -j / (resolution-1)
+    }
+  }
+
+  // Create the VBOs.
+  // We make a separate VBO for vertices and colors.
   // This operation must be performed BEFORE we initialize any VAOs.
   pointsVboVertices.Gen(numVertices, 3, pointPositions.get(), GL_STATIC_DRAW); // 3 values per position
-  pointsVboColors.Gen(numVertices, 4, pointColors.get(), GL_STATIC_DRAW); // 4 values per color
+  pointsVboColors.Gen(numVertices, 4, pointColors.get(), GL_STATIC_DRAW);      // 4 values per color
+
+  linesVboVertices.Gen(2 * numVertices, 3, linePositions.get(), GL_STATIC_DRAW);
+  linesVboColors.Gen(2 * numVertices, 4, pointColors.get(), GL_STATIC_DRAW);
 
   // Create the VAOs. There is a single VAO in this example.
   // Important: this code must be executed AFTER we created our pipeline program, and AFTER we set up our VBOs.
@@ -412,15 +478,17 @@ void initScene(int argc, char *argv[])
   // In this homework, "geometry" means vertex positions and colors. In homework 2, it will also include
   // vertex normal and vertex texture coordinates for texture mapping.
   pointsVao.Gen();
+  linesVao.Gen();
 
   // Set up the relationship between the "position" shader variable and the VAO.
   // Important: any typo in the shader variable name will lead to malfunction.
   pointsVao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &pointsVboVertices, "position");
+  linesVao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &linesVboVertices, "position");
 
   // Set up the relationship between the "color" shader variable and the VAO.
   // Important: any typo in the shader variable name will lead to malfunction.
   pointsVao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &pointsVboColors, "color");
-
+  linesVao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &linesVboColors, "color");
 
   // Check for any OpenGL errors.
   std::cout << "GL error status is: " << glGetError() << std::endl;
@@ -436,28 +504,28 @@ int main(int argc, char *argv[])
   }
 
   cout << "Initializing GLUT..." << endl;
-  glutInit(&argc,argv);
+  glutInit(&argc, argv);
 
   cout << "Initializing OpenGL..." << endl;
 
-  #ifdef __APPLE__
-    glutInitDisplayMode(GLUT_3_2_CORE_PROFILE | GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
-  #else
-    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
-  #endif
+#ifdef __APPLE__
+  glutInitDisplayMode(GLUT_3_2_CORE_PROFILE | GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
+#else
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH | GLUT_STENCIL);
+#endif
 
   glutInitWindowSize(windowWidth, windowHeight);
-  glutInitWindowPosition(0, 0);  
+  glutInitWindowPosition(0, 0);
   glutCreateWindow(windowTitle);
 
   cout << "OpenGL Version: " << glGetString(GL_VERSION) << endl;
   cout << "OpenGL Renderer: " << glGetString(GL_RENDERER) << endl;
   cout << "Shading Language Version: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << endl;
 
-  #ifdef __APPLE__
-    // This is needed on recent Mac OS X versions to correctly display the window.
-    glutReshapeWindow(windowWidth - 1, windowHeight - 1);
-  #endif
+#ifdef __APPLE__
+  // This is needed on recent Mac OS X versions to correctly display the window.
+  glutReshapeWindow(windowWidth - 1, windowHeight - 1);
+#endif
 
   // Tells GLUT to use a particular display function to redraw.
   glutDisplayFunc(displayFunc);
@@ -476,18 +544,18 @@ int main(int argc, char *argv[])
   // callback for releasing the keys on the keyboard
   glutKeyboardUpFunc(keyboardUpFunc);
 
-  // init glew
-  #ifdef __APPLE__
-    // nothing is needed on Apple
-  #else
-    // Windows, Linux
-    GLint result = glewInit();
-    if (result != GLEW_OK)
-    {
-      cout << "error: " << glewGetErrorString(result) << endl;
-      exit(EXIT_FAILURE);
-    }
-  #endif
+// init glew
+#ifdef __APPLE__
+  // nothing is needed on Apple
+#else
+  // Windows, Linux
+  GLint result = glewInit();
+  if (result != GLEW_OK)
+  {
+    cout << "error: " << glewGetErrorString(result) << endl;
+    exit(EXIT_FAILURE);
+  }
+#endif
 
   // Perform the initialization.
   initScene(argc, argv);
@@ -495,4 +563,3 @@ int main(int argc, char *argv[])
   // Sink forever into the GLUT loop.
   glutMainLoop();
 }
-
