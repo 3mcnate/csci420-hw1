@@ -13,6 +13,7 @@
 #include "pipelineProgram.h"
 #include "vbo.h"
 #include "vao.h"
+#include "helper.h"
 
 #include <iostream>
 #include <cstring>
@@ -73,7 +74,9 @@ int windowHeight = 720;
 char windowTitle[512] = "CSCI 420 Homework 1";
 
 // Number of vertices in the single triangle (starter code).
-int numVertices;
+int numPointVertices;
+int numLineVertices;
+int numTriangleVertices;
 
 size_t counter = 0;
 
@@ -352,17 +355,21 @@ void displayFunc()
   {
   case POINTS:
     pointsVao.Bind();
-    glDrawArrays(GL_POINTS, 0, numVertices); // Render the VAO, by rendering "numVertices", starting from vertex 0.
+    glDrawArrays(GL_POINTS, 0, numPointVertices); // Render the VAO, by rendering "numPointVertices", starting from vertex 0.
     break;
 
   case LINES:
     linesVao.Bind();
-    glDrawArrays(GL_LINES, 0, 2 * numVertices);
+    glDrawArrays(GL_LINES, 0, numLineVertices);
     break;
 
   case TRIANGLES:
     trianglesVao.Bind();
-    glDrawArrays(GL_TRIANGLES, 0, 3 * numVertices);
+    glDrawArrays(GL_TRIANGLES, 0, numTriangleVertices);
+    break;
+
+  case SMOOTH_TRIANGLES:
+    // TODO
     break;
   }
 
@@ -410,19 +417,17 @@ void initScene(int argc, char *argv[])
   // Allocate array of vertices from pixel values
   const int h = heightmapImage->getHeight();
   const int w = heightmapImage->getWidth();
-  numVertices = h * w;
+  numPointVertices = h * w;
 
   float resolution = h / 4;
   float xBias = w / 2;
   float zBias = h / 2;
 
   // (x,y,z) coordinates for each vertex
-  std::unique_ptr<float[]> pointPositions = std::make_unique<float[]>(numVertices * 3);
-  std::unique_ptr<float[]> linePositions = std::make_unique<float[]>(numVertices * 6);
-  std::unique_ptr<float[]> trianglePositions = std::make_unique<float[]>(numVertices * 9);
+  std::unique_ptr<float[]> pointPositions = std::make_unique<float[]>(numPointVertices * 3);
 
   // Vertex colors.
-  std::unique_ptr<float[]> pointColors = std::make_unique<float[]>(numVertices * 4);
+  std::unique_ptr<float[]> pointColors = std::make_unique<float[]>(numPointVertices * 4);
 
   // setting point positions
   for (int y = 0; y < h; ++y)
@@ -431,46 +436,65 @@ void initScene(int argc, char *argv[])
     {
       // setting vertex positions
       int pos = 3 * (y * w + x);
-      pointPositions[pos] = (-x + xBias) / (resolution - 1);                // x = i / (resolution-1)
-      pointPositions[pos + 1] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
-      pointPositions[pos + 2] = (-y + zBias) / (resolution - 1);            // z = -j / (resolution-1)
+
+      unsigned char pixel = heightmapImage->getPixel(x, y, 0);
+
+      pointPositions[pos] = (-x + xBias) / (resolution - 1);     // x = i / (resolution-1)
+      pointPositions[pos + 1] = pixel / 255.0f;                  // y = height
+      pointPositions[pos + 2] = (-y + zBias) / (resolution - 1); // z = -j / (resolution-1)
 
       // setting colors
-      float color = (heightmapImage->getPixel(x, y, 0) + 30.0) / 285.0;
+      float color = (pixel + 30.0) / 285.0;
       unsigned int colorPos = 4 * (y * w + x);
-      pointColors[colorPos] = color;
-      pointColors[colorPos + 1] = color;
-      pointColors[colorPos + 2] = color;
-      pointColors[colorPos + 3] = color;
+      std::fill_n(pointColors.get() + colorPos, 4, color);
     }
   }
 
   // setting line positions
+  numLineVertices = 2 * ((h * (w - 1)) + (w * (h - 1)));
+  std::unique_ptr<float[]> lineVertices = std::make_unique<float[]>(numLineVertices * 3);
+  std::unique_ptr<float[]> lineColors = std::make_unique<float[]>(numLineVertices * 4);
+
+  std::cout << "numLineVertices: " << numLineVertices << endl;
+
+  int vIndex = 0;
+  int cIndex = 0;
+
   for (int y = 0; y < h; ++y)
   {
     for (int x = 0; x < w; ++x)
     {
-      // setting vertex positions
-      int pos = 6 * (y * w + x);
-      linePositions[pos] = (-x + xBias) / (resolution - 1);                // x = i / (resolution-1)
-      linePositions[pos + 1] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
-      linePositions[pos + 2] = (-y + zBias) / (resolution - 1);            // z = -j / (resolution-1)
+      // create first point
+      Vertex vertex1 = createVertex(xBias, zBias, resolution, heightmapImage->getPixel(x, y, 0), x, y);
 
-      // repeat for the next point
-      linePositions[pos + 3] = (-x + xBias) / (resolution - 1);            // x = i / (resolution-1)
-      linePositions[pos + 4] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
-      linePositions[pos + 5] = (-y + zBias) / (resolution - 1);            // z = -j / (resolution-1)
+      // create line in y-direction if not out of bounds
+      if (y < h - 1)
+      {
+        Vertex vertex2 = createVertex(xBias, zBias, resolution, heightmapImage->getPixel(x, y + 1, 0), x, y + 1);
+        addLineToVBO(lineVertices, lineColors, vIndex, cIndex, vertex1, vertex2);
+      }
+
+      // create line in x-direction if not out of bounds
+      if (x < w - 1)
+      {
+        Vertex vertex2 = createVertex(xBias, zBias, resolution, heightmapImage->getPixel(x + 1, y, 0), x + 1, y);
+        addLineToVBO(lineVertices, lineColors, vIndex, cIndex, vertex1, vertex2);
+      }
     }
   }
+
+  std::cout << "final vIndex: " << vIndex << " / 3 = " << (vIndex / 3) << endl;
+
+  // correctly set the first and last vertex for lines
 
   // Create the VBOs.
   // We make a separate VBO for vertices and colors.
   // This operation must be performed BEFORE we initialize any VAOs.
-  pointsVboVertices.Gen(numVertices, 3, pointPositions.get(), GL_STATIC_DRAW); // 3 values per position
-  pointsVboColors.Gen(numVertices, 4, pointColors.get(), GL_STATIC_DRAW);      // 4 values per color
+  pointsVboVertices.Gen(numPointVertices, 3, pointPositions.get(), GL_STATIC_DRAW); // 3 values per position
+  pointsVboColors.Gen(numPointVertices, 4, pointColors.get(), GL_STATIC_DRAW);      // 4 values per color
 
-  linesVboVertices.Gen(2 * numVertices, 3, linePositions.get(), GL_STATIC_DRAW);
-  linesVboColors.Gen(2 * numVertices, 4, pointColors.get(), GL_STATIC_DRAW);
+  linesVboVertices.Gen(numLineVertices, 3, lineVertices.get(), GL_STATIC_DRAW);
+  linesVboColors.Gen(numLineVertices, 4, lineColors.get(), GL_STATIC_DRAW);
 
   // Create the VAOs. There is a single VAO in this example.
   // Important: this code must be executed AFTER we created our pipeline program, and AFTER we set up our VBOs.
