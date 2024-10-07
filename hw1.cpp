@@ -67,9 +67,21 @@ size_t counter = 0;
 // CSCI 420 helper classes.
 OpenGLMatrix matrix;
 PipelineProgram pipelineProgram;
-VBO vboVertices;
-VBO vboColors;
-VAO vao;
+
+// points
+VBO pointsVboVertices;
+VBO pointsVboColors;
+VAO pointsVao;
+
+// lines
+VBO linesVboVertices;
+VBO linesVboColors;
+VAO linesVao;
+
+// triangles
+VBO trianglesVboVertices;
+VBO trianglesVboColors;
+VAO trianglesVao;
 
 // Write a screenshot to the specified filename.
 void saveScreenshot(const char * filename)
@@ -304,7 +316,7 @@ void displayFunc()
 
   // Execute the rendering.
   // Bind the VAO that we want to render. Remember, one object = one VAO. 
-  vao.Bind();
+  pointsVao.Bind();
   glDrawArrays(GL_POINTS, 0, numVertices); // Render the VAO, by rendering "numVertices", starting from vertex 0.
 
   // Swap the double-buffers.
@@ -358,51 +370,56 @@ void initScene(int argc, char *argv[])
   float zBias = h/2;
 
   // (x,y,z) coordinates for each vertex
-  std::unique_ptr<float[]> positions = std::make_unique<float[]>(numVertices * 3);
+  std::unique_ptr<float[]> pointPositions = std::make_unique<float[]>(numVertices * 3);
+  std::unique_ptr<float[]> linePositions = std::make_unique<float[]>(numVertices * 6);
+  std::unique_ptr<float[]> trianglePositions = std::make_unique<float[]>(numVertices * 9);
 
   // Vertex colors.
-  std::unique_ptr<float[]> colors = std::make_unique<float[]>(numVertices * 4);
+  std::unique_ptr<float[]> pointColors = std::make_unique<float[]>(numVertices * 4);
 
+  // setting point positions
   for (int y = 0; y < h; ++y)
   {
     for (int x = 0; x < w; ++x) 
     {
       // setting vertex positions
       unsigned int pos = 3 * (y * w + x);
-      positions[pos] = (-x + xBias) / (resolution - 1); // x = i / (resolution-1)
-      positions[pos + 1] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
-      positions[pos + 2] = ((float)-y + zBias) / (resolution - 1); // z = -j / (resolution-1)
+      pointPositions[pos] = (-x + xBias) / (resolution - 1); // x = i / (resolution-1)
+      pointPositions[pos + 1] = heightmapImage->getPixel(x, y, 0) / 255.0f; // y = height
+      pointPositions[pos + 2] = (-y + zBias) / (resolution - 1); // z = -j / (resolution-1)
 
       // setting colors
       float color = (heightmapImage->getPixel(x, y, 0) + 30.0) / 285.0;
       unsigned int colorPos = 4 * (y * w + x);
-      colors[colorPos] = color;
-      colors[colorPos + 1] = color;
-      colors[colorPos + 2] = color;
-      colors[colorPos + 3] = color;
+      pointColors[colorPos] = color;
+      pointColors[colorPos + 1] = color;
+      pointColors[colorPos + 2] = color;
+      pointColors[colorPos + 3] = color;
     }
   }
+
+  // setting line positions
 
   // Create the VBOs. 
   // We make a separate VBO for vertices and colors. 
   // This operation must be performed BEFORE we initialize any VAOs.
-  vboVertices.Gen(numVertices, 3, positions.get(), GL_STATIC_DRAW); // 3 values per position
-  vboColors.Gen(numVertices, 4, colors.get(), GL_STATIC_DRAW); // 4 values per color
+  pointsVboVertices.Gen(numVertices, 3, pointPositions.get(), GL_STATIC_DRAW); // 3 values per position
+  pointsVboColors.Gen(numVertices, 4, pointColors.get(), GL_STATIC_DRAW); // 4 values per color
 
   // Create the VAOs. There is a single VAO in this example.
   // Important: this code must be executed AFTER we created our pipeline program, and AFTER we set up our VBOs.
   // A VAO contains the geometry for a single object. There should be one VAO per object.
   // In this homework, "geometry" means vertex positions and colors. In homework 2, it will also include
   // vertex normal and vertex texture coordinates for texture mapping.
-  vao.Gen();
+  pointsVao.Gen();
 
   // Set up the relationship between the "position" shader variable and the VAO.
   // Important: any typo in the shader variable name will lead to malfunction.
-  vao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &vboVertices, "position");
+  pointsVao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &pointsVboVertices, "position");
 
   // Set up the relationship between the "color" shader variable and the VAO.
   // Important: any typo in the shader variable name will lead to malfunction.
-  vao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &vboColors, "color");
+  pointsVao.ConnectPipelineProgramAndVBOAndShaderVariable(&pipelineProgram, &pointsVboColors, "color");
 
 
   // Check for any OpenGL errors.
