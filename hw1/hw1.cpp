@@ -19,6 +19,7 @@
 #include <cstring>
 #include <memory>
 #include <vector>
+#include <chrono>
 
 #if defined(WIN32) || defined(_WIN32)
 #ifdef _DEBUG
@@ -111,6 +112,7 @@ VBO downSmoothTriangesVBO;
 VBO colorSmoothTriangesVBO;
 VAO smoothTrianglesVAO;
 
+auto lastScreenshot = std::chrono::system_clock::now();
 int screenshotCounter = 0;
 
 // Write a screenshot to the specified filename.
@@ -131,9 +133,14 @@ void idleFunc()
 {
   // Do some stuff...
   // For example, here, you can save the screenshots to disk (to make the animation).
-  char buf[32];
-  snprintf(buf, 32, "animation/%03d.jpg", screenshotCounter++);
-  saveScreenshot(buf);
+  auto now = std::chrono::system_clock::now();
+  if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastScreenshot).count() >= 100 && screenshotCounter < 300)
+  {
+    char buf[32];
+    snprintf(buf, 32, "animation1/%03d.jpg", screenshotCounter++);
+    saveScreenshot(buf);
+    lastScreenshot = std::chrono::system_clock::now();
+  }
 
   // Notify GLUT that it should call displayFunc.
   glutPostRedisplay();
@@ -645,6 +652,8 @@ void initScene(int argc, char *argv[])
 
   // Check for any OpenGL errors.
   std::cout << "GL error status is: " << glGetError() << std::endl;
+
+  // for animation
 }
 
 int main(int argc, char *argv[])

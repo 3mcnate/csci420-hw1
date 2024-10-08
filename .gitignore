@@ -1,6 +1,4 @@
-*.o
-Bin
-hw1
-screenshot.jpg
 .vscode/
-heightmap
+.DS_Store
+external/
+hw1/animation/*
