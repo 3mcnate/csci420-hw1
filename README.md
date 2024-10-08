@@ -1,5 +1,9 @@
 Program Usage:
 
+./hw1 <image> [-a]
+
+-a: save animation ('-a' could actually be any string)
+
 1. Click and drag to rotate
 2. While holding shift, click and drag to scale image
 3. **While holding 'z', click and drag to translate image**
