@@ -1,6 +1,6 @@
 Program Usage:
 
-./hw1 <image> [-a]
+./hw1 \<image> [-a]
 
 -a: save animation ('-a' could actually be any string)
 
