@@ -112,6 +112,7 @@ VBO downSmoothTriangesVBO;
 VBO colorSmoothTriangesVBO;
 VAO smoothTrianglesVAO;
 
+bool animate = false;
 auto lastScreenshot = std::chrono::system_clock::now();
 int screenshotCounter = 0;
 
@@ -134,7 +135,7 @@ void idleFunc()
   // Do some stuff...
   // For example, here, you can save the screenshots to disk (to make the animation).
   auto now = std::chrono::system_clock::now();
-  if (std::chrono::duration_cast<std::chrono::milliseconds>(now - lastScreenshot).count() >= 100 && screenshotCounter < 300)
+  if (animate && std::chrono::duration_cast<std::chrono::milliseconds>(now - lastScreenshot).count() >= 100 && screenshotCounter < 300)
   {
     char buf[32];
     snprintf(buf, 32, "animation1/%03d.jpg", screenshotCounter++);
@@ -658,11 +659,16 @@ void initScene(int argc, char *argv[])
 
 int main(int argc, char *argv[])
 {
-  if (argc != 2)
+  if (argc < 2)
   {
     cout << "The arguments are incorrect." << endl;
     cout << "usage: ./hw1 <heightmap file>" << endl;
     exit(EXIT_FAILURE);
+  }
+
+  if (argc == 3) 
+  {
+    animate = true;
   }
 
   cout << "Initializing GLUT..." << endl;
